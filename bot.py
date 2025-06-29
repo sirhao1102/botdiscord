@@ -1,30 +1,35 @@
-import os
-import faiss
-import json
-import numpy as np
 import discord
-from sentence_transformers import SentenceTransformer
+from discord.ext import commands
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
-index = faiss.read_index("faiss_patch.index")
-with open("contexts.json", "r", encoding="utf-8") as f:
-    contexts = json.load(f)
+# Tạo intents với quyền đọc nội dung tin nhắn
+intents = discord.Intents.default()
+intents.message_content = True
 
-client = discord.Client(intents=discord.Intents.default())
+# Khởi tạo bot với prefix "!"
+bot = commands.Bot(command_prefix="!", intents=intents)
 
-@client.event
+# Khi bot online, in ra thông báo
+@bot.event
 async def on_ready():
-    print(f"✅ Bot đã online: {client.user}")
+    print(f"✅ Bot đã sẵn sàng: {bot.user}")
 
-@client.event
-async def on_message(message):
-    if message.author == client.user:
-        return
-    if message.content.startswith("!patch"):
-        query = message.content[6:].strip()
-        q_emb = model.encode(query).astype('float32')
-        D, I = index.search(np.array([q_emb]), 1)
-        context = contexts[I[0][0]]
-        await message.channel.send(f"🔎 Nội dung liên quan: {context[:1800]}")
+# Lệnh kiểm tra bot sống
+@bot.command()
+async def ping(ctx):
+    await ctx.send("🏓 Pong!")
 
-client.run(os.getenv("DISCORD_TOKEN"))
+# Lệnh mẫu cho patch notes (anh có thể gắn xử lý context ở đây)
+@bot.command()
+async def patch(ctx, *, query: str):
+    await ctx.send(f"🔍 Đang tìm thông tin cho: {query}")
+    # Đây anh gắn code tìm context JSON / FAISS / gọi API vào
+    # Ví dụ trả lời đơn giản
+    await ctx.send(f"❌ Hiện tại chưa có thông tin cho: {query}")
+
+# Chạy bot (token lấy từ ENV hoặc dán trực tiếp trong dev)
+import os
+TOKEN = os.getenv("DISCORD_TOKEN")
+if not TOKEN:
+    TOKEN = "DÁN_TOKEN_VÀO_ĐÂY_NẾU_TEST_LOCAL"
+
+bot.run(TOKEN)
