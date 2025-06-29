@@ -1,7 +1,7 @@
 name: Run Discord Bot
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Cho phép anh bấm Run workflow thủ công
 
 jobs:
   run-bot:
