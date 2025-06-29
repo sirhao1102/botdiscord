@@ -1,24 +1,16 @@
-import discord
-import json
 import os
+import faiss
+import json
+import numpy as np
+import discord
+from sentence_transformers import SentenceTransformer
 
-TOKEN = os.getenv("DISCORD_TOKEN")
+model = SentenceTransformer("all-MiniLM-L6-v2")
+index = faiss.read_index("faiss_patch.index")
+with open("contexts.json", "r", encoding="utf-8") as f:
+    contexts = json.load(f)
 
-intents = discord.Intents.default()
-intents.message_content = True
-client = discord.Client(intents=intents)
-
-# Load JSON patch data
-with open("patch_data.json", "r", encoding="utf-8") as f:
-    patch_data = json.load(f)
-
-def search_patch(query):
-    query_lower = query.lower()
-    results = []
-    for item in patch_data:
-        if query_lower in (item["title"] + " " + item["content"]).lower():
-            results.append(item)
-    return results
+client = discord.Client(intents=discord.Intents.default())
 
 @client.event
 async def on_ready():
@@ -28,15 +20,11 @@ async def on_ready():
 async def on_message(message):
     if message.author == client.user:
         return
-    
     if message.content.startswith("!patch"):
-        query = message.content[len("!patch"):].strip()
-        await message.channel.send("⏳ Đang tìm thông tin...")
-        results = search_patch(query)
-        if results:
-            reply = "\n\n".join([f"📌 **{r['title']}**\n{r['content']}" for r in results[:3]])
-        else:
-            reply = "❌ Không tìm thấy thông tin liên quan trong patch notes."
-        await message.channel.send(reply)
+        query = message.content[6:].strip()
+        q_emb = model.encode(query).astype('float32')
+        D, I = index.search(np.array([q_emb]), 1)
+        context = contexts[I[0][0]]
+        await message.channel.send(f"🔎 Nội dung liên quan: {context[:1800]}")
 
-client.run(TOKEN)
+client.run(os.getenv("DISCORD_TOKEN"))
